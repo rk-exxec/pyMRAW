@@ -53,6 +53,49 @@ def test_12bit_cihx():
     np.testing.assert_equal(mraw.shape, (15, 384, 384))
     np.testing.assert_equal(mraw.dtype, np.dtype(np.uint16))
 
+@pytest.mark.filterwarnings('ignore')
+def test_scaled_cihx():
+    filename = './data/ball_12bit_with_scale.cihx'
+    cih = pyMRAW.get_cih(filename)
+    assert(cih["Pixel Scale"] != 1.0)
+
+    filename = './data/ball_12bit.cihx'
+    cih = pyMRAW.get_cih(filename)
+    assert(cih["Pixel Scale"] == 1.0)
+
+@pytest.mark.filterwarnings('ignore')
+def test_perf_12bit_process():
+    import numpy as np
+    path_str = "./data/ball_12bit_full.cihx"
+    video, info = pyMRAW.load_video(path_str)
+    N = info['Total Frame']
+    h = info['Image Height']
+    w = info['Image Width']
+    bit = info['Color Bit']
+
+    streak = np.zeros((N,h), dtype=np.uint16)
+
+    for i in range(N):
+        streak[i] = video[i,:,w//2]
+
+    streak = streak.T
+
+@pytest.mark.filterwarnings('ignore')
+def test_perf_16bit_process():
+    import numpy as np
+    path_str = "./data/ball_16bit_full.cihx"
+    video, info = pyMRAW.load_video(path_str)
+    N = info['Total Frame']
+    h = info['Image Height']
+    w = info['Image Width']
+    bit = info['Color Bit']
+
+    streak = np.zeros((N,h), dtype=np.uint16)
+
+    for i in range(N):
+        streak[i] = video[i,:,w//2]
+
+    streak = streak.T
 
 @pytest.mark.filterwarnings('ignore')
 def test_save_mraw():

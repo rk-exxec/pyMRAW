@@ -77,8 +77,23 @@ def get_cih(filename):
             'EffectiveBit Depth': int(raw_cih_dict['cih']['imageDataInfo']['effectiveBit']['depth']),
             'EffectiveBit Side': raw_cih_dict['cih']['imageDataInfo']['effectiveBit']['side'],
             'Color Bit': int(raw_cih_dict['cih']['imageDataInfo']['colorInfo']['bit']),
-            'Comment Text': raw_cih_dict['cih']['basicInfo'].get('comment', ''),
+            'Comment Text': raw_cih_dict['cih']['basicInfo'].get('comment', '')
         }
+
+        # check for pixel size calibration
+        if raw_cih_dict['cih']['plugin']['calibration'].get('enable', False):
+            unit = raw_cih_dict['cih']['plugin']['calibration'].get('distanceUnit','Milimeters (mm)')
+            px_scale = float(raw_cih_dict['cih']['plugin']['calibration'].get('sizeOfPixel',1.0))
+            if "(mm)" in unit:
+                px_scale *= 1e-3
+            elif "(µm)" in unit:
+                px_scale *= 1e-6
+        else:
+            px_scale = 1.0
+
+        cih["Pixel Scale"] = px_scale
+            
+
 
     else:
         raise Exception('Unsupported configuration file ({:s})!'.format(ext))
