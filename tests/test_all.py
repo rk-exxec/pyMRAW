@@ -26,8 +26,8 @@ def test():
     #    N = 12
     mraw = open(filename[:-4] + '.mraw', 'rb')
     mraw.seek(0, 0)  # find the beginning of the file
-    image_data = pyMRAW.load_images(mraw, h, w, N)  # load N images
-    #np.memmap in load_images loads enables reading an array from disc as if from RAM. If you want all the images to load on RAM imediatly use load_images(mraw, h, w, N).copy()
+    image_data = pyMRAW.load_mraw(mraw, h, w, N)  # load N images
+    #np.memmap in load_mraw loads enables reading an array from disc as if from RAM. If you want all the images to load on RAM imediatly use load_mraw(mraw, h, w, N).copy()
     mraw.close()
     np.testing.assert_allclose(image_data[0,0,0],1889, atol=1e-8)
 
@@ -39,7 +39,7 @@ def test_cihx():
     N = cih['Total Frame']
     h = cih['Image Height']
     w = cih['Image Width']
-    mraw = pyMRAW.load_images(filename[:-5] + '.mraw', h, w, N, bit=16, roll_axis=False)
+    mraw = pyMRAW.load_mraw(filename[:-5] + '.mraw', h, w, N, bit=16, roll_axis=False)
     np.testing.assert_equal(mraw.shape, (4, 80, 1024))
 
 @pytest.mark.filterwarnings('ignore')
@@ -49,7 +49,7 @@ def test_12bit_cihx():
     N = cih['Total Frame']
     h = cih['Image Height']
     w = cih['Image Width']
-    mraw = pyMRAW.load_images(filename[:-5] + '.mraw', h, w, N, bit=12, roll_axis=False)
+    mraw = pyMRAW.load_mraw(filename[:-5] + '.mraw', h, w, N, bit=12, roll_axis=False)
     np.testing.assert_equal(mraw.shape, (15, 384, 384))
     np.testing.assert_equal(mraw.dtype, np.dtype(np.uint16))
 
@@ -62,6 +62,12 @@ def test_scaled_cihx():
     filename = './data/ball_12bit.cihx'
     cih = pyMRAW.get_cih(filename)
     assert(cih["Pixel Scale"] == 1.0)
+
+@pytest.mark.filterwarnings('ignore')
+def test_mp4_cihx():
+    filename = './data/test_mp4.cihx'
+    video,info = pyMRAW.load_video(filename)
+    np.testing.assert_equal(video.shape, (376, 384, 384))
 
 @pytest.mark.filterwarnings('ignore')
 def test_save_mraw():

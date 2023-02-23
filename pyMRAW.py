@@ -29,6 +29,7 @@ import numpy as np
 import numba as nb
 import warnings
 import xmltodict
+import imageio.v3 as iio
 
 __version__ = '0.30'
 
@@ -73,11 +74,12 @@ def get_cih(filename):
             'Original Total Frame': int(raw_cih_dict['cih']['frameInfo']['recordedFrame']),
             'Image Width': int(raw_cih_dict['cih']['imageDataInfo']['resolution']['width']),
             'Image Height': int(raw_cih_dict['cih']['imageDataInfo']['resolution']['height']),
-            'File Format': raw_cih_dict['cih']['imageFileInfo']['fileFormat'],
             'EffectiveBit Depth': int(raw_cih_dict['cih']['imageDataInfo']['effectiveBit']['depth']),
             'EffectiveBit Side': raw_cih_dict['cih']['imageDataInfo']['effectiveBit']['side'],
             'Color Bit': int(raw_cih_dict['cih']['imageDataInfo']['colorInfo']['bit']),
-            'Comment Text': raw_cih_dict['cih']['basicInfo'].get('comment', '')
+            'Comment Text': raw_cih_dict['cih']['basicInfo'].get('comment', ''),
+            'File Format': str(raw_cih_dict['cih']['imageFileInfo'].get('fileFormat', 'mraw')).lower(),
+            'Color Type': str(raw_cih_dict['cih']['imageDataInfo']['colorInfo'].get('type', 'Mono'))
         }
 
         # check for pixel size calibration
@@ -92,16 +94,14 @@ def get_cih(filename):
             px_scale = 1.0
 
         cih["Pixel Scale"] = px_scale
-            
-
 
     else:
         raise Exception('Unsupported configuration file ({:s})!'.format(ext))
 
     # check exceptions
     ff = cih['File Format']
-    if ff.lower() not in SUPPORTED_FILE_FORMATS:
-        raise Exception('Unexpected File Format: {:g}.'.format(ff))
+    if ff not in SUPPORTED_FILE_FORMATS:
+        warnings.warn(f'File Format: <{ff}> not fully suported, trying to load with external lib...')
     bits = cih['Color Bit']
     if bits < 12:
         warnings.warn('Not 12bit ({:g} bits)! clipped values?'.format(bits))
@@ -121,7 +121,12 @@ def get_cih(filename):
     return cih
 
 
-def load_images(mraw, h, w, N, bit=16, roll_axis=True):
+def load_other_video_format(file, color_format='gray'):
+    images = iio.imread(file, plugin="pyav", format=color_format)
+    return images
+
+
+def load_mraw(mraw, h, w, N, bit=16, roll_axis=True):
     """
     loads the next N images from the binary mraw file into a numpy array.
     Inputs:
@@ -167,12 +172,21 @@ def load_video(cih_file):
 
     """
     cih = get_cih(cih_file)
-    mraw_file = path.splitext(cih_file)[0] + '.mraw'
+    video_file = path.splitext(cih_file)[0] + '.' + cih['File Format']
     N = cih['Total Frame']
     h = cih['Image Height']
     w = cih['Image Width']
     bit = cih['Color Bit']
-    images = load_images(mraw_file, h, w, N, bit, roll_axis=False)
+    # check if video is in color
+    if cih['Color Type'] == "Raw":
+        mono_col = int(cih['Color Bit']) == int(cih['EffectiveBit Depth'])
+    else: 
+        mono_col = cih['Color Type'] == "Mono"
+
+    if cih['File Format'].lower() in SUPPORTED_FILE_FORMATS:
+        images = load_mraw(video_file, h, w, N, bit, roll_axis=False)
+    else:
+        images = load_other_video_format(video_file, color_format='gray' if mono_col else 'rgb24')
     return images, cih
 
 
@@ -317,7 +331,7 @@ def show_UI():
     name, ext = path.splitext(filename)
     mraw = open(name + '.mraw', 'rb')
     mraw.seek(0, 0)  # find the beginning of the file
-    image_data = load_images(mraw, h, w, N)  # load N images
+    image_data = load_mraw(mraw, h, w, N)  # load N images
     #np.memmap in load_images loads enables reading an array from disc as if from RAM. If you want all the images to load on RAM imediatly use load_images(mraw, h, w, N).copy()
     mraw.close()
 
