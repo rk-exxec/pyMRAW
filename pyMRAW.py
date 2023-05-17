@@ -84,7 +84,7 @@ def get_cih(filename):
 
         # check for pixel size calibration
         if raw_cih_dict['cih']['plugin']['calibration'].get('enable', False):
-            unit = raw_cih_dict['cih']['plugin']['calibration'].get('distanceUnit','Milimeters (mm)')
+            unit = raw_cih_dict['cih']['plugin']['calibration'].get('distanceUnit','Millimeters (mm)')
             px_scale = float(raw_cih_dict['cih']['plugin']['calibration'].get('sizeOfPixel',1.0))
             if "(mm)" in unit:
                 px_scale *= 1e-3
