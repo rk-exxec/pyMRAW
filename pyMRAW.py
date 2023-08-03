@@ -126,7 +126,7 @@ def load_other_video_format(file, color_format='gray'):
     return images
 
 
-def load_mraw(mraw, h, w, N, bit=16, roll_axis=True):
+def load_mraw(mraw, h, w, N, bit=16, roll_axis=True, to_memory=False):
     """
     loads the next N images from the binary mraw file into a numpy array.
     Inputs:
@@ -140,14 +140,17 @@ def load_mraw(mraw, h, w, N, bit=16, roll_axis=True):
         images: array of shape (h, w, N) if `roll_axis` is True, or (N, h, w) otherwise.
     """
 
-    if int(bit) == 16:
-        images = np.memmap(mraw, dtype=np.uint16, mode='r', shape=(N, h, w))
-    elif int(bit) == 8:
-        images = np.memmap(mraw, dtype=np.uint8, mode='r', shape=(N, h, w))
-    elif int(bit) == 12:
+    if int(bit) == 12:
         warnings.warn("12bit images will be loaded into memory!")
         #images = _read_uint12_video(mraw, (N, h, w))
         images = _read_uint12_video_prec(mraw, (N, h, w))
+    elif int(bit) in [16,8]:
+        dt = np.int16 if int(bit) == 16 else np.int8
+        if to_memory:
+            images = np.fromfile(mraw, dtype=dt, sep="")
+            images = images.reshape((N,h,w))
+        else: 
+            images = np.memmap(mraw, dtype=dt, mode='r', shape=(N, h, w))
     else:
         raise Exception(f"Unsupported bit depth: {bit}")
 
@@ -159,7 +162,7 @@ def load_mraw(mraw, h, w, N, bit=16, roll_axis=True):
         return images
 
 
-def load_video(cih_file):
+def load_video(cih_file, to_memory=False):
     """
     Loads and returns images and a cih info dict.
     
@@ -184,7 +187,7 @@ def load_video(cih_file):
         mono_col = cih['Color Type'] == "Mono"
 
     if cih['File Format'].lower() in SUPPORTED_FILE_FORMATS:
-        images = load_mraw(video_file, h, w, N, bit, roll_axis=False)
+        images = load_mraw(video_file, h, w, N, bit, roll_axis=False, to_memory=to_memory)
     else:
         images = load_other_video_format(video_file, color_format='gray' if mono_col else 'rgb24')
     return images, cih
