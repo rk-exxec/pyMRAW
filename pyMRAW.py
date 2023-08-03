@@ -147,8 +147,7 @@ def load_mraw(mraw, h, w, N, bit=16, roll_axis=True, to_memory=False):
     elif int(bit) in [16,8]:
         dt = np.int16 if int(bit) == 16 else np.int8
         if to_memory:
-            images = np.fromfile(mraw, dtype=dt, sep="")
-            images = images.reshape((N,h,w))
+            images = np.fromfile(mraw, dtype=dt, sep="").reshape((N,h,w))
         else: 
             images = np.memmap(mraw, dtype=dt, mode='r', shape=(N, h, w))
     else:
